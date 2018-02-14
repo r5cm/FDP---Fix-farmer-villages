@@ -11,6 +11,7 @@ session.rep <- rforcecom.login(username.rep, password.rep)
 # Retrieve farmers with submission__r.village
 farmers <- rforcecom.retrieve(session.rep, "farmer__c", 
                               c("Id", "FDP_submission__r.village__c"))
+library(dplyr)
 farmers <- select(farmers, Id, FDP_submission__c.village__c)
 names(farmers) <- c("Id.farmer", "subm.village")
 # Clean farmers
@@ -26,9 +27,7 @@ farmers$subm.village <- gsub("Mekar Sari Jaya", "Mekar sari jaya", farmers$subm.
 farmers$subm.village <- gsub("Buntu Terpedo", "buntu torpedo", farmers$subm.village)
 farmers$subm.village <- gsub("Terpedo Jaya", "Torpedo jaya", farmers$subm.village)
 farmers$subm.village <- gsub("Lembang-Lembang", "LeMbang-LeMbang", farmers$subm.village)
-
-# PENDIENTES: Patila, Tolangi, Mulyorejo and Kalotok
-
+farmers$subm.village <- gsub("Mekar Sai Jaya", "Mekar sari jaya", farmers$subm.village)
 
 # Retrieve village names and  ID
 villages <- rforcecom.retrieve(session.rep, "village__c", 
@@ -42,11 +41,39 @@ villages <- villages[!dup.villages, ]
 
 
 # Add village Id to farmers
-library(dplyr)
-test <- farmers %>% left_join(villages, by = c("subm.village" = "name.village"))
-
+farmers <- farmers %>% left_join(villages, by = c("subm.village" = "name.village"))
 farmers.upd <- select(farmers, Id.farmer, Id.village)
+names(farmers.upd) <- c("Id", "village__c")
 
 # Update farmer's  villages
+# run an insert job into the Account object
+job_info <- rforcecom.createBulkJob(session.adm, 
+                                    operation='update', 
+                                    object='farmer__c')
 
-# Test update
+# split into batch sizes of 500 (2 batches for our 1000 row sample dataset)
+batches_info <- rforcecom.createBulkBatch(session.adm, 
+                                          jobId=job_info$id, 
+                                          farmers.upd, 
+                                          multiBatch = TRUE, 
+                                          batchSize=500)
+
+# check on status of each batch
+batches_status <- lapply(batches_info, 
+                         FUN=function(x){
+                               rforcecom.checkBatchStatus(session.adm, 
+                                                          jobId=x$jobId, 
+                                                          batchId=x$id)
+                         })
+# get details on each batch
+batches_detail <- lapply(batches_info, 
+                         FUN=function(x){
+                               rforcecom.getBatchDetails(session.adm, 
+                                                         jobId=x$jobId, 
+                                                         batchId=x$id)
+                         })
+# close the job
+close_job_info <- rforcecom.closeBulkJob(session.adm, jobId=job_info$id)
+
+# Test update (SF report)
+# https://taroworks-1410.cloudforce.com/00O0K00000A2QsZ
