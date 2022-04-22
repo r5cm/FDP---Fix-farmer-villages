@@ -1,11 +1,11 @@
 # Login to Salesforce
 library(RForcecom)
-username.adm <- "admin@utzmars.org"
-password.adm <- "gfutzmars2018n0ljYwQQqYVWfu9RIfPqWIn8"
+username.adm <- readline(prompt = "Enter username: ")
+password.adm <- readline(prompt = "Enter password: ")
 session.adm <- rforcecom.login(username.adm, password.adm)
 
-username.rep <- "reports@utzmars.org"
-password.rep <- "marsme2018HWNSDAF67f2wAQNThoFnEHEV"
+username.rep <- readline(prompt = "Enter username: ")
+password.rep <- readline(prompt = "Enter password: ")
 session.rep <- rforcecom.login(username.rep, password.rep)
 
 # Retrieve farmers with submission__r.village
